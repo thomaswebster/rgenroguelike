@@ -9,11 +9,10 @@
         \/     \/       |__|               \/     \/     \/     \/     \/ 
 
 TODO:
--FIX RETARDED COORDINATE SYSTEM THAT YOU INVENTED YOU RETARD
--FIX ENEMY SPAWNING
--ENEMY INTERACTION
--CLEAN CODE
--PLAYER AND ENEMY STATS
+-Universal move function
+-Interact funct
+-Get closest non-same team entity (for enemies)
+-improve pathing for enemies
 '''
 
 from curses import wrapper
@@ -72,12 +71,12 @@ class GameMap(object):
     XP_RATE = 1
 
     ENEMIES_LIST = {
-    0.025:["A", {"H":1000, "ATK":30,"LEVEL":20,"XP":1000, "NAME":"angel"}],
-    0.1:["D", {"H":100, "ATK":10,"LEVEL":10,"XP":500, "NAME":"dragon"}],
-    0.15:["w", {"H":25, "ATK":4,"LEVEL":7,"XP":50, "NAME":"warrior"}],
-    0.25:["b", {"H":10, "ATK":3,"LEVEL":4,"XP":15, "NAME":"bandit"}],
-    0.5:["g", {"H":5, "ATK":1,"LEVEL":2,"XP":5,"NAME":"goblin"}],
-    1:["c", {"H":2, "ATK":1,"LEVEL":1,"XP":3,"NAME":"chicken"}]
+    0.025:["A", {"H":1000, "ATK":30,"LEVEL":20,"XP":1000, "NAME":"angel", "SIGHT":3}],
+    0.1:["D", {"H":100, "ATK":10,"LEVEL":10,"XP":500, "NAME":"dragon", "SIGHT":4}],
+    0.15:["w", {"H":25, "ATK":4,"LEVEL":7,"XP":50, "NAME":"warrior", "SIGHT":5}],
+    0.25:["b", {"H":10, "ATK":3,"LEVEL":4,"XP":15, "NAME":"bandit", "SIGHT":10}],
+    0.5:["g", {"H":5, "ATK":1,"LEVEL":2,"XP":5,"NAME":"goblin", "SIGHT":8}],
+    1:["c", {"H":2, "ATK":1,"LEVEL":1,"XP":3,"NAME":"chicken", "SIGHT":0}]
     }
 
     def __init__(self, size):
@@ -90,10 +89,10 @@ class GameMap(object):
         self.entities.append(self.player)
         self.time = 0
         self.offset = [self.player.pos[0] - self.size[0]//2, self.player.pos[1] - self.size[1]//2]
-        self.log = ["Welcome to goblin world!","wasd to move","kill stuff","",""]
+        self.log = ["[0] Welcome to goblin world!","[0] wasd to move","[0] kill stuff","[0]","[0]"]
 
     def check_tile_collision(self, pos):
-        return self.tile_map[pos[0]][pos[1]] in GameMap.PASSABLE_TILES
+        return (self.tile_map[pos[0]][pos[1]] in GameMap.PASSABLE_TILES) and self.entity_map[pos[0]][pos[1]] == -1
 
     def alog(self, string):
         self.log.append("[%d] "%self.time + string)
@@ -130,34 +129,52 @@ class GameMap(object):
 
         self.entities.append(toadd)
 
+    def dist(self, pos1, pos2):
+        return [pos1[0]-pos2[0],pos1[1]-pos2[1]]
+
+    def update_entities(self):
+        for enemy in self.entities[1:]:
+            plyrdist = self.dist(enemy.pos, self.player.pos)
+            if sum(map(abs, plyrdist)) <= enemy.attributes["SIGHT"]:
+                if enemy.pos[0] > self.player.pos[0]:
+                    enemy.pos[0] -= 1
+                elif enemy.pos[0] < self.player.pos[0]:
+                    enemy.pos[0] +=1
+                elif enemy.pos[1] < self.player.pos[1]:
+                    enemy.pos[1] +=1
+                elif enemy.pos[1] > self.player.pos[1]:
+                    enemy.pos[1] -=1
+
+
     def move_player(self, pos):
-        if self.check_tile_collision([self.size[0]//2 + pos[0], self.size[1]//2 + pos[1]]):
-            self.time += 1
-            if self.entity_map[self.size[0]//2 + pos[0]][self.size[1]//2 + pos[1]] + 1:
-                self.fight(self.player, self.entities[self.entity_map[self.size[0]//2 + pos[0]][self.size[1]//2 + pos[1]]])
-            else:
-                self.player.pos[0] += pos[0]
-                self.player.pos[1] += pos[1]
+        self.time += 1
+        if self.entity_map[self.size[0]//2 + pos[0]][self.size[1]//2 + pos[1]] + 1:
+            self.fight(self.player, self.entities[self.entity_map[self.size[0]//2 + pos[0]][self.size[1]//2 + pos[1]]])
+        elif self.check_tile_collision([self.size[0]//2 + pos[0], self.size[1]//2 + pos[1]]):
+            self.player.pos[0] += pos[0]
+            self.player.pos[1] += pos[1]
 
-                self.offset = [self.player.pos[0] - self.size[0]//2, self.player.pos[1] - self.size[1]//2]
+            self.offset = [self.player.pos[0] - self.size[0]//2, self.player.pos[1] - self.size[1]//2]
 
-                self.update_map()
+            self.update_map()
                 
-                #spawn enemies along newly generated "BAR"
-                if pos[0]:
-                    for i in range(self.size[1]):
-                        spawnpos = [self.offset[0] + ((pos[0] + 1)// 2) * (self.size[0] - 1), i + self.offset[1]]
+            #spawn enemies along newly generated "BAR"
+            if pos[0]:
+                for i in range(self.size[1]):
+                    spawnpos = [self.offset[0] + ((pos[0] + 1)// 2) * (self.size[0] - 1), i + self.offset[1]]
 
-                        if random() < GameMap.ENEMY_SPAWN_RATE and self.tile_map[((pos[0] + 1)// 2) * (self.size[0] - 1)][i] in GameMap.PASSABLE_TILES:
-                            self.add_enemy(spawnpos)
-                            #self.entities.append(Enemy(spawnpos, "g"))
-                elif pos[1]:
-                    for i in range(self.size[0]):
-                        spawnpos = [i + self.offset[0], self.offset[1] + ((pos[1] + 1)// 2) * (self.size[1] - 1)]
+                    if random() < GameMap.ENEMY_SPAWN_RATE and self.tile_map[((pos[0] + 1)// 2) * (self.size[0] - 1)][i] in GameMap.PASSABLE_TILES:
+                        self.add_enemy(spawnpos)
 
-                        if random() < GameMap.ENEMY_SPAWN_RATE and self.tile_map[i][((pos[1] + 1)// 2) * (self.size[1] - 1)] in GameMap.PASSABLE_TILES:
-                            self.add_enemy(spawnpos)
-                            #self.entities.append(Enemy(spawnpos, "g"))
+            elif pos[1]:
+                for i in range(self.size[0]):
+                    spawnpos = [i + self.offset[0], self.offset[1] + ((pos[1] + 1)// 2) * (self.size[1] - 1)]
+
+                    if random() < GameMap.ENEMY_SPAWN_RATE and self.tile_map[i][((pos[1] + 1)// 2) * (self.size[1] - 1)] in GameMap.PASSABLE_TILES:
+                        self.add_enemy(spawnpos)
+
+        self.update_entity_map()
+        self.update_entities()
 
     def update_player(self, screen):
         self.screen = screen
@@ -210,7 +227,7 @@ class GameMap(object):
                 else:
                     screen.addch(j,i, ord(" "), curses.color_pair(self.tile_map[j][i] + 1))
 
-        screen.addstr("\nPLAYER [HP%d/%d] [LVL %d] [ATK %d] [XP REQ %d]"%(self.player.attributes["H"],
+        screen.addstr("\nPLAYER [HP%d/%d] [LVL %d] [ATK %d] [XP REQ %d] ||| [I]nventory [O]ptions [P]layer"%(self.player.attributes["H"],
             self.player.attributes["MH"],self.player.attributes["LVL"],self.player.attributes["ATK"], self.player.xp_to_level()))
 
         for logline in self.log[-6:]:
@@ -228,10 +245,6 @@ def main(stdscr):
 
     while True:
         gamemap.update_player(stdscr)
-
-        #gamemap.update_map()
-
-        gamemap.update_entity_map()
 
         gamemap.draw(stdscr)
 
