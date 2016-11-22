@@ -18,6 +18,7 @@ TODO:
 from curses import wrapper
 import curses, noise
 from random import randint, random
+from time import time
 
 import global_consts
 from entity import *
@@ -40,7 +41,7 @@ class GameMap(object):
 
     def update_entities(self):
         for entity in self.entities[1:]:
-            entity.update(self.entities)
+            entity.update(self.collision_map, self.entity_map, self.entities, self.offset)
 
     def move_player(self, pos):
         self.time += 1
@@ -63,8 +64,8 @@ class GameMap(object):
                     if random() < global_consts.ENEMY_SPAWN_RATE and self.tile_map[i][((pos[1] + 1)// 2) * (self.size[1] - 1)] in global_consts.PASSABLE_TILES:
                         self.add_enemy(spawnpos)
 
-        self.update_entities()
         self.update_entity_map()
+        self.update_entities()
 
     def update_player(self, screen):
         self.screen = screen

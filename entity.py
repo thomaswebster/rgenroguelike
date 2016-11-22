@@ -18,7 +18,7 @@ class Killable(Entity):
         Entity.__init__(self, pos, character)
         self.stats = {"STR":5, "END":5, "SPD":5}    #increase on level up (choice for player)
         self.profs = {"SWM":10, "SWD":5}            #increase on usage -> perks? [placeholder]
-        self.tags = {"NAME":"killable", "LVL":1,"HP":10, "MHP":10, "TEAM":"nature"}
+        self.tags = {"NAME":"killable", "LVL":1,"HP":10, "MHP":10, "TEAM":"nature", "SIGHT":5}
         self.xp = {"XP":0, "DXP":5}
 
     def is_dead(self):
@@ -49,6 +49,7 @@ class Killable(Entity):
         return False
 
     def level_up(self):
+        self.xp["XP"] -= 10 + int((self.tags["LVL"]**1.5)*0.5)
 
         #increase level by 1...
         self.tags["LVL"] += 1
@@ -64,9 +65,27 @@ class Killable(Entity):
         #heal on level up
         self.tags["HP"] = self.tags["MHP"]
 
-    def update(self, entlist):
-        #behavior of killables (find closest ent not on team then go kill...)
-        pass
+
+    def update(self, colmap, entmap, entlist, offset):
+        amt = [0, 0]
+        disttoplayer = sum(map(abs, global_consts.dist(self.pos, entlist[0].pos)))
+        if disttoplayer < self.tags["SIGHT"]:
+            relpos = global_consts.dist(self.pos, entlist[0].pos)
+            
+            if relpos[0] < 0:
+                amt = [1, 0]
+            elif relpos[0] > 0:
+                amt = [-1, 0]
+            elif relpos[1] > 0:
+                amt = [0, -1]
+            elif relpos[1] < 0:
+                amt = [0, 1]
+
+        else:
+            pass
+            #amt = [randint(0,1), randint(0,1)]
+
+        self.move(colmap, entmap, entlist, offset, amt)
 
     def move(self, colmap, entmap, entlist, offset, amt):
         #find tile we want to move to
