@@ -1,5 +1,5 @@
 #global imports
-
+from random import randint
 
 #local imports
 import global_consts
@@ -11,8 +11,7 @@ class Entity(object):
         self.character = character
 
     def interact(self, ent):
-        return "%s interacted with %s"%(self.attributes["NAME"], ent.attributes["NAME"])
-
+        global_consts.LOG.append("%s interacted with %s"%(self.attributes["NAME"], ent.attributes["NAME"]))
 
 class Killable(Entity):
     def __init__(self, pos, character):
@@ -32,7 +31,7 @@ class Killable(Entity):
     def damage(self, num):
         self.tags["HP"] -= num
 
-        return is_dead()
+        return self.is_dead()
 
     def xp_to_level(self):
         return 10 + int((self.tags["LVL"]**1.5)*0.5) - self.xp["XP"]
@@ -63,28 +62,31 @@ class Killable(Entity):
         self.tags["HP"] += self.tags["LVL"]
 
         #heal on level up
-        self.attributes["H"] = self.attributes["MH"]
+        self.tags["HP"] = self.tags["MHP"]
 
     def update(self, entlist):
         #behavior of killables (find closest ent not on team then go kill...)
         pass
 
-    def move(self, colmap, entmap, entlist, amt):
+    def move(self, colmap, entmap, entlist, offset, amt):
         #find tile we want to move to
         totile = [self.pos[0] + amt[0], self.pos[1] + amt[1]]
 
-        if colmap[totile[0]][totile[1]] == 0:
+        if colmap[totile[0] - offset[0]][totile[1] - offset[1]] == 0:
         #first check if terrain is passable
-            if entmap[totile[0]][totile[1]] == -1:
+            if entmap[totile[0] - offset[0]][totile[1] - offset[1]] == -1:
                 #then check no entities either
                 self.pos = totile
+
+                return True
             else:
                 #interact with whatever we bumped into!
-                self.interact(entlist[entmap[totile[0]][totile[1]]])
+                self.interact(entlist[entmap[totile[0] - offset[0]][totile[1] - offset[1]]], entlist)
+        return False
     
     def interact(self, ent, entlist):
-        if isinstance(ent, Killable) and ent.attributes["TEAM"] != self.attributes["TEAM"]:
-            dam = randint(0, self.attributes["STR"])
+        if isinstance(ent, Killable) and ent.tags["TEAM"] != self.tags["TEAM"]:
+            dam = randint(0, self.stats["STR"])
             
             global_consts.LOG.append("%s damaged %s for %d damage"%(self.tags["NAME"], ent.tags["NAME"], dam))
 
@@ -100,21 +102,3 @@ class Player(Killable):
     def __init__(self, pos):
         Killable.__init__(self, pos, "@")
         self.tags = {"NAME":"player", "LVL":1, "HP":100, "MHP":100, "TEAM":"player"}
-
-    def move(self, colmap, entmap, entlist, amt):
-        #find tile we want to move to
-        totile = [self.pos[0] + amt[0], self.pos[1] + amt[1]]
-
-        if colmap[totile[0]][totile[1]] == 0:
-        #first check if terrain is passable
-            if entmap[totile[0]][totile[1]] == -1:
-                #then check no entities either
-                self.pos = totile
-
-                #return true when the player has moved for map redrawing and spawning
-                return True
-            else:
-                #interact with whatever we bumped into!
-                self.interact(entlist[entmap[totile[0]][totile[1]]], entlist)
-
-        return False

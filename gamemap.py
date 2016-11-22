@@ -44,11 +44,9 @@ class GameMap(object):
 
     def move_player(self, pos):
         self.time += 1
-        if self.player.move(self.collision_map, self.entity_map, self.entities, pos):
-            self.update_map(self.player.pos)
 
-            global_consts.LOG.append(str(self.player.pos))
-            global_consts.LOG.append(str(self.collision_map[self.player.pos[0]][self.player.pos[1]]))
+        if self.player.move(self.collision_map, self.entity_map, self.entities, self.offset, pos):
+            self.update_map(self.player.pos)
 
             #spawn enemies along newly generated "BAR"
             if pos[0]:
@@ -121,7 +119,7 @@ class GameMap(object):
                 if self.entity_map[j][i] >= 0:
                     screen.addch(j,i, ord(self.entities[self.entity_map[j][i]].character), curses.color_pair(self.tile_map[j][i] + 1))
                 else:
-                    screen.addch(j,i, ord(str(self.collision_map[j][i])), curses.color_pair(self.tile_map[j][i] + 1))
+                    screen.addch(j,i, ord(" "), curses.color_pair(self.tile_map[j][i] + 1))
 
         screen.addstr("\nPLAYER [HP%d/%d] [LVL %d] [XP REQ %d] ||| [I]nventory [O]ptions [P]layer"%(self.player.tags["HP"],
             self.player.tags["MHP"],self.player.tags["LVL"], self.player.xp_to_level()))
