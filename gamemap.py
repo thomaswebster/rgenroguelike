@@ -25,6 +25,7 @@ from entity import *
 
 class GameMap(object):
     def __init__(self, size, screen):
+        self.seed = random()
         self.size = size
         self.tile_map = [[0]*size[1] for i in range(size[0])]
         self.collision_map = [[0]*size[1] for i in range(size[0])]
@@ -64,9 +65,6 @@ class GameMap(object):
                     if random() < global_consts.ENEMY_SPAWN_RATE and self.tile_map[i][((pos[1] + 1)// 2) * (self.size[1] - 1)] in global_consts.PASSABLE_TILES:
                         self.add_enemy(spawnpos)
 
-        #self.update_entity_map()
-        #self.update_entities()
-
     def update_player(self, screen):
         pass
 
@@ -100,7 +98,7 @@ class GameMap(object):
         
         for i in range(self.size[1]):
             for j in range(self.size[0]):
-                self.tile_map[j][i] = int(noise.snoise2((i+self.offset[1]) / 48, (j+self.offset[0]) / 48, 4) * 3 + 2)
+                self.tile_map[j][i] = int(noise.snoise3((i+self.offset[1]) / 48, (j+self.offset[0]) / 48, self.seed *255, 4) * 3 + 2)
                 self.collision_map[j][i] = 0 if (self.tile_map[j][i] in global_consts.PASSABLE_TILES) else 1
 
 
@@ -126,13 +124,11 @@ def main(stdscr):
     curses.update_lines_cols()
     curses.curs_set(0)
 
-    #stdscr.timeout(global_consts.MSF) 
     curses.noecho()
+
+    global_consts.GAMESIZE = [curses.LINES-8,curses.COLS-1]
     
-    gamemap = GameMap([curses.LINES-8,curses.COLS-1], stdscr)
-
-    #gamemap = GameMap(global_consts.GAMESIZE, stdscr)
-
+    gamemap = GameMap(global_consts.GAMESIZE, stdscr)
 
     while True:
         inp = [0,0]
@@ -148,7 +144,7 @@ def main(stdscr):
             inp = [0, 1]
 
         gamemap.move_player(inp)
-        #gamemap.update_entity_map()
+        gamemap.update_entity_map()
         gamemap.update_entities()
 
         gamemap.draw(stdscr)

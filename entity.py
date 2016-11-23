@@ -79,8 +79,11 @@ class Killable(Entity):
             relpos = global_consts.dist(self.pos, entlist[0].pos)
 
             normalise = max(map(abs, relpos + [1]))
-            tomove = [-int(relpos[0]/normalise), -int(relpos[1]/normalise)]# + abs(int(relpos[0]/max(relpos)))]
-            global_consts.LOG.append(str(tomove) + " " + str(max(relpos)))
+            tomove = [-int(relpos[0]/normalise), -int(relpos[1]/normalise)]
+
+            if sum(map(abs, tomove)) == 2:
+                tomove[1] = 0
+                
             amt = tomove
 
         self.move(colmap, entmap, entlist, offset, amt)
@@ -100,10 +103,11 @@ class Killable(Entity):
                 #update location
                 self.pos = totile
 
-                if self.is_onscreen(offset):
+                if not self.is_onscreen(offset):
                     entlist.remove(self)
                     return False
-                global_consts.LOG.append(str(entlist))
+                #global_consts.LOG.append(str(entlist))
+                
                 #whack in new position
                 entmap[self.pos[0] - offset[0]][self.pos[1] - offset[1]] = entlist.index(self)
                 

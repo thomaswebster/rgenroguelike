@@ -7,8 +7,7 @@ PASSABLE_TILES = [0 , 1]
 ENEMY_SPAWN_RATE = 0.01
 
 
-curses.update_lines_cols()
-GAMESIZE = [curses.LINES-8,curses.COLS-1]
+GAMESIZE = [0, 0]
 
 
 def dist(pos1, pos2):
