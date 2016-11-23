@@ -24,7 +24,7 @@ import global_consts
 from entity import *
 
 class GameMap(object):
-    def __init__(self, size):
+    def __init__(self, size, screen):
         self.size = size
         self.tile_map = [[0]*size[1] for i in range(size[0])]
         self.collision_map = [[0]*size[1] for i in range(size[0])]
@@ -33,8 +33,9 @@ class GameMap(object):
         self.player = Player([0,0])
         self.make_color_pairs()
         self.entities.append(self.player)
-        self.time = 0
+
         self.offset = [self.player.pos[0] - self.size[0]//2, self.player.pos[1] - self.size[1]//2]
+        self.screen = screen
 
     def add_enemy(self, pos):
         self.entities.append(Killable(pos, "k"))
@@ -44,7 +45,6 @@ class GameMap(object):
             entity.update(self.collision_map, self.entity_map, self.entities, self.offset)
 
     def move_player(self, pos):
-        self.time += 1
 
         if self.player.move(self.collision_map, self.entity_map, self.entities, self.offset, pos):
             self.update_map(self.player.pos)
@@ -64,21 +64,11 @@ class GameMap(object):
                     if random() < global_consts.ENEMY_SPAWN_RATE and self.tile_map[i][((pos[1] + 1)// 2) * (self.size[1] - 1)] in global_consts.PASSABLE_TILES:
                         self.add_enemy(spawnpos)
 
-        self.update_entity_map()
-        self.update_entities()
+        #self.update_entity_map()
+        #self.update_entities()
 
     def update_player(self, screen):
-        self.screen = screen
-
-        c = chr(screen.getch())
-        if c == "w":
-            self.move_player([-1, 0])
-        if c == "s":
-            self.move_player([1, 0])
-        if c == "a":
-            self.move_player([0, -1])
-        if c == "d":
-            self.move_player([0, 1])
+        pass
 
     def make_color_pairs(self):
         for i in range(len(global_consts.TILES)):
@@ -136,10 +126,30 @@ def main(stdscr):
     curses.update_lines_cols()
     curses.curs_set(0)
 
-    gamemap = GameMap([curses.LINES-8,curses.COLS-1])
+    #stdscr.timeout(global_consts.MSF) 
+    curses.noecho()
+    
+    gamemap = GameMap([curses.LINES-8,curses.COLS-1], stdscr)
+
+    #gamemap = GameMap(global_consts.GAMESIZE, stdscr)
+
 
     while True:
-        gamemap.update_player(stdscr)
+        inp = [0,0]
+
+        c = stdscr.getch()
+        if c == curses.KEY_UP:
+            inp = [-1, 0]
+        if c == curses.KEY_DOWN:
+            inp = [1, 0]
+        if c == curses.KEY_LEFT:
+            inp = [0, -1]
+        if c == curses.KEY_RIGHT:
+            inp = [0, 1]
+
+        gamemap.move_player(inp)
+        #gamemap.update_entity_map()
+        gamemap.update_entities()
 
         gamemap.draw(stdscr)
 

@@ -6,7 +6,9 @@ TILES = {0:curses.COLOR_GREEN, 1:curses.COLOR_YELLOW, 2:curses.COLOR_CYAN, 3:cur
 PASSABLE_TILES = [0 , 1]
 ENEMY_SPAWN_RATE = 0.01
 
-FPS = 10
+
+curses.update_lines_cols()
+GAMESIZE = [curses.LINES-8,curses.COLS-1]
 
 
 def dist(pos1, pos2):

@@ -18,7 +18,7 @@ class Killable(Entity):
         Entity.__init__(self, pos, character)
         self.stats = {"STR":5, "END":5, "SPD":5}    #increase on level up (choice for player)
         self.profs = {"SWM":10, "SWD":5}            #increase on usage -> perks? [placeholder]
-        self.tags = {"NAME":"killable", "LVL":1,"HP":10, "MHP":10, "TEAM":"nature", "SIGHT":5}
+        self.tags = {"NAME":"killable", "LVL":1,"HP":10, "MHP":10, "TEAM":"nature", "SIGHT":15}
         self.xp = {"XP":0, "DXP":5}
 
     def is_dead(self):
@@ -27,6 +27,10 @@ class Killable(Entity):
             return True
         return False
 
+    def is_onscreen(self, offset):
+        x = (offset[1] <= self.pos[1] < (offset[1] + global_consts.GAMESIZE[1]))
+        y = (offset[0] <= self.pos[0] < (offset[0] + global_consts.GAMESIZE[0]))
+        return x and y
 
     def damage(self, num):
         self.tags["HP"] -= num
@@ -67,23 +71,17 @@ class Killable(Entity):
 
 
     def update(self, colmap, entmap, entlist, offset):
+        #basic AI for attack-player-on-sight enemies
+
         amt = [0, 0]
         disttoplayer = sum(map(abs, global_consts.dist(self.pos, entlist[0].pos)))
         if disttoplayer < self.tags["SIGHT"]:
             relpos = global_consts.dist(self.pos, entlist[0].pos)
-            
-            if relpos[0] < 0:
-                amt = [1, 0]
-            elif relpos[0] > 0:
-                amt = [-1, 0]
-            elif relpos[1] > 0:
-                amt = [0, -1]
-            elif relpos[1] < 0:
-                amt = [0, 1]
 
-        else:
-            pass
-            #amt = [randint(0,1), randint(0,1)]
+            normalise = max(map(abs, relpos + [1]))
+            tomove = [-int(relpos[0]/normalise), -int(relpos[1]/normalise)]# + abs(int(relpos[0]/max(relpos)))]
+            global_consts.LOG.append(str(tomove) + " " + str(max(relpos)))
+            amt = tomove
 
         self.move(colmap, entmap, entlist, offset, amt)
 
@@ -95,8 +93,20 @@ class Killable(Entity):
         #first check if terrain is passable
             if entmap[totile[0] - offset[0]][totile[1] - offset[1]] == -1:
                 #then check no entities either
+
+                #remove from map array old position
+                entmap[self.pos[0] - offset[0]][self.pos[1] - offset[1]] = -1
+
+                #update location
                 self.pos = totile
 
+                if self.is_onscreen(offset):
+                    entlist.remove(self)
+                    return False
+                global_consts.LOG.append(str(entlist))
+                #whack in new position
+                entmap[self.pos[0] - offset[0]][self.pos[1] - offset[1]] = entlist.index(self)
+                
                 return True
             else:
                 #interact with whatever we bumped into!
